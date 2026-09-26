@@ -1,0 +1,358 @@
+<!-- TREINO_CONJUNCOES_V1: mesmo modelo do Banco de Direito Previdenciário (Supabase + fila adaptativa) -->
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Treino de Conjunções — Português</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#172033;--muted:#68738a;--brand:#5146e5;--ok:#0f9d67;--bad:#dc3d4b;--line:#dfe4ee}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink)}
+header{background:#111827;color:#fff;padding:22px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{margin:0;font-size:24px}header p{margin:6px 0 0;color:#cbd5e1}
+.wrap{max-width:1200px;margin:22px auto;padding:0 16px}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 2px 8px #18213a0a}
+.filters{position:sticky;top:12px;height:max-content}
+.filters label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+.filters select,.filters input,.btn{width:100%;padding:11px;border:1px solid #ccd4e3;border-radius:9px;background:#fff;font:inherit}
+.btn{cursor:pointer;background:var(--brand);color:#fff;border:0;font-weight:700;margin-top:10px}
+.btn.secondary{background:#eef0ff;color:#3830a3}.btn.danger{background:#fee2e2;color:#a11}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.stat{padding:15px;border:1px solid var(--line);border-radius:12px;background:#fff}.stat b{display:block;font-size:24px}
+.qmeta{color:var(--muted);font-size:13px;margin-bottom:12px}
+.question{font-size:17px;line-height:1.7}.questionText{max-width:900px}
+.questionText .para{margin:0 0 14px}.questionText .option{display:block;margin:10px 0;padding-left:8px}
+.resolution{margin-top:18px;padding:18px;border-radius:12px;background:#f7f8ff;border:1px solid #dfe3ff;line-height:1.7}
+.resolution h3{margin:0 0 10px;font-size:16px;color:#3830a3}
+.modebox{margin-top:14px}.modegrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modebtn{padding:11px;border:1px solid #ccd4e3;border-radius:9px;background:#fff;cursor:pointer;font-weight:700;color:var(--ink)}
+.modebtn.active{background:#eef0ff;border-color:var(--brand);color:#3830a3}
+.nextbtn{margin-top:14px;padding:11px 16px;border:0;border-radius:9px;background:var(--brand);color:#fff;font-weight:700;cursor:pointer}
+.answerfirst{background:#eef0ff;color:#312e81;border:1px solid #c7d2fe;border-radius:10px;padding:12px;margin-bottom:10px;font-size:16px}
+.resultline{font-size:16px;margin:8px 0 12px}
+.choicegrid{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.choice{padding:12px 18px;border:1px solid #cbd3e2;border-radius:10px;background:#fff;cursor:pointer;font-weight:700}
+.choice:hover{border-color:var(--brand)}
+.choice.selected{outline:3px solid #4f46e5}
+.choice.correctAnswer{border-color:#15803d;background:#dcfce7;color:#166534}
+.choice.wrongAnswer{border-color:#dc2626;background:#fee2e2;color:#991b1b}
+.feedback{margin-top:16px;padding:13px;border-radius:10px;line-height:1.6}
+.ok{background:#dcfce7;color:#166534}.bad{background:#fee2e2;color:#991b1b}
+.hidden{display:none!important}
+.report table{width:100%;border-collapse:collapse}.report th,.report td{padding:9px;border-bottom:1px solid var(--line);text-align:left}
+.note{font-size:12px;color:var(--muted);line-height:1.5}
+.topbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.progress{height:8px;background:#e7eaf1;border-radius:20px;overflow:hidden}.progress>div{height:100%;background:var(--brand);width:0}
+.tag{background:#eef0ff;color:#3830a3;padding:4px 8px;border-radius:8px;font-size:12px}
+.selectbox{position:relative}
+.multihead{width:100%;padding:11px;border:1px solid #ccd4e3;border-radius:9px;background:#fff;font:inherit;text-align:left;cursor:pointer}
+.multilist{display:none;position:absolute;z-index:20;left:0;right:0;max-height:260px;overflow:auto;background:#fff;border:1px solid #ccd4e3;border-radius:9px;margin-top:5px;padding:8px;box-shadow:0 8px 24px #18213a18}
+.selectbox.open .multilist{display:block}
+.multirow{display:flex;align-items:center;gap:8px;padding:8px;border-radius:7px;cursor:pointer}.multirow:hover{background:#f4f5ff}.multirow input{width:auto}
+.selectedinfo{font-size:12px;color:var(--muted);margin-top:6px}
+.multiactions{display:flex;gap:6px;margin-bottom:6px}
+.mini{padding:6px 8px;border:1px solid #ccd4e3;border-radius:7px;background:#f7f8fc;cursor:pointer;font-size:12px}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,20,35,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal-box{background:#fff;border-radius:14px;padding:22px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(15,20,35,.28)}
+.modal-box h3{margin:0 0 10px;font-size:17px}.modal-box p{margin:0 0 18px;font-size:14px;color:#68738a;line-height:1.5}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}.modal-actions .btn{width:auto;margin-top:0;padding:9px 16px}
+.userbox{display:flex;align-items:center;gap:10px;font-size:13px;color:#cbd5e1}
+.userbox .btn{width:auto;margin-top:0;padding:7px 12px;font-size:13px;background:#1f2937;color:#fff}
+.auth-overlay{position:fixed;inset:0;background:#f4f6fb;display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+.auth-box{background:#fff;border-radius:14px;padding:32px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(15,20,35,.15);border:1px solid #dfe4ee}
+.auth-box h2{margin:0 0 6px;font-size:20px}.auth-box p.note{margin:0 0 20px}
+.auth-box label{display:block;font-size:13px;color:#68738a;margin:14px 0 6px}
+.auth-box input{width:100%;padding:11px;border:1px solid #ccd4e3;border-radius:9px;font:inherit}
+.auth-box .btn{margin-top:16px}
+.auth-error{background:#fee2e2;color:#991b1b;border-radius:9px;padding:10px 12px;font-size:13px;margin-top:14px}
+.auth-status{font-size:13px;color:#68738a;margin-top:12px;text-align:center}
+.auth-loading{font-size:13px;color:#68738a;text-align:center;padding:40px 0}
+@media(max-width:850px){
+  html,body{overflow-x:hidden}
+  .wrap{margin:10px auto;padding:0 10px}
+  .grid{display:flex;flex-direction:column;gap:12px}
+  .filters{position:static!important;height:auto!important}
+  header{padding:12px 14px}header h1{font-size:20px}header p{font-size:13px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}
+  .stat{padding:11px}.stat b{font-size:20px}
+  .card{padding:14px;border-radius:12px}
+  .choicegrid{flex-direction:column}.choice{width:100%}
+  .question{font-size:16px;line-height:1.6}
+  .multilist{max-height:45vh}
+}
+@media(max-width:480px){
+  .wrap{padding:0 8px}header h1{font-size:18px}header p{font-size:12px}
+  .question{font-size:15.5px;line-height:1.55}
+  .btn,.modebtn,.nextbtn,.choice{min-height:44px}.nextbtn{width:100%}
+}
+</style></head><body>
+<header><div><h1>🔗 Treino de Conjunções</h1><p>Português • 5 módulos • fila adaptativa</p></div><div class="userbox hidden" id="userBox"><span id="userEmail"></span><button type="button" class="btn" id="logoutBtn">Sair</button></div></header>
+
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <h2>Entrar</h2>
+    <p class="note">Use a mesma conta do Banco de Direito Previdenciário para sincronizar seu progresso.</p>
+    <div id="authLoading" class="auth-loading">Verificando sessão...</div>
+    <div id="authForm" class="hidden">
+      <label for="authEmail">Email</label>
+      <input type="email" id="authEmail" autocomplete="username" placeholder="voce@exemplo.com">
+      <label for="authPassword">Senha</label>
+      <input type="password" id="authPassword" autocomplete="current-password" placeholder="mínimo 6 caracteres">
+      <button type="button" class="btn" id="authLoginBtn">Entrar</button>
+      <button type="button" class="btn secondary" id="authSignupBtn">Criar conta</button>
+      <div id="authError" class="auth-error hidden"></div>
+      <div id="authStatus" class="auth-status"></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap hidden" id="appRoot">
+<div class="stats"><div class="stat"><b id="sTotal">0</b><span>Total disponível</span></div><div class="stat"><b id="sUnseen">0</b><span>Inéditas</span></div><div class="stat"><b id="sWrong">0</b><span>Erradas</span></div><div class="stat"><b id="sAccuracy">—</b><span>Precisão</span></div></div>
+<div class="grid"><aside class="card filters"><h2>🎯 Montar bateria</h2>
+<label>Módulo (opcional — pode escolher vários)</label><div class="selectbox" id="aulaBox"><button type="button" class="multihead" id="aulaHead">Todos os módulos ▾</button><div class="multilist" id="aulaList"></div></div><div class="selectedinfo" id="aulaInfo">Todos os módulos selecionados</div>
+<label>Assunto (opcional)</label><select id="fAssunto"><option value="">Todos os assuntos</option></select>
+<label>Modo de estudo</label><div class="modebox"><div class="modegrid"><button type="button" class="modebtn active" id="modeStudy">📖 Modo Estudo</button><button type="button" class="modebtn" id="modeProof">📝 Modo Prova</button></div><p class="note" id="modeHint">Mostra o resultado e a explicação após cada resposta.</p></div>
+<label>Número de questões *</label><input id="fQtd" type="number" min="1" value="10">
+<button class="btn" id="start">Começar bateria</button><button class="btn secondary" id="reportBtn">Ver relatório</button><button class="btn danger" id="reset">Zerar meu histórico</button>
+<p class="note">A ordem adaptativa é: <b>inéditas → erradas → acertadas</b>. Zerar aqui apaga só o histórico de conjunções; o de Previdenciário fica intacto.</p>
+</aside>
+<main><section class="card" id="quizCard"><div class="topbar"><div><span class="tag" id="qTag">Pronto</span><div class="qmeta" id="qMeta">Escolha os filtros e a quantidade de questões.</div></div><div id="qCounter"></div></div><div class="progress"><div id="bar"></div></div><div id="questionArea" style="margin-top:20px"><h2>Monte sua primeira bateria</h2><p class="note">Deixe Módulo e Assunto em branco para um treino misto.</p></div></section>
+<section class="card report hidden" id="report" style="margin-top:18px"><h2>📊 Relatório</h2><div id="reportBody"></div></section></main></div></div>
+
+<div class="modal-overlay hidden" id="resetModalOverlay"><div class="modal-box"><h3>Zerar histórico?</h3><p>Isso apaga acertos, erros e questões já vistas <b>deste treino de conjunções</b>. Não pode ser desfeito.</p><div class="modal-actions"><button type="button" class="btn secondary" id="resetCancelBtn">Cancelar</button><button type="button" class="btn danger" id="resetConfirmBtn">Zerar histórico</button></div></div></div>
+
+<script>
+// ================== BANCO DE QUESTÕES ==================
+// Formato: [id, módulo, assunto, tipo ('ce' | 'multi'), enunciado, alternativas (multi) | null, gabarito, explicação]
+const MODULOS={1:'Coordenativas',2:'Adverbiais I — causa, concessão, condição, conformidade',3:'Adverbiais II — fim, consequência, comparação, proporção, tempo',4:'Integrantes e os vários “que”, “se” e “como”',5:'Reescrita e pontuação (estilo banca)'};
+const RAW=[
+// ---------- Módulo 1: Coordenativas ----------
+['m1-01',1,'Coordenativas adversativas','ce','Em “Estudou o edital inteiro, mas não resolveu nenhuma questão da banca”, a conjunção “mas” introduz oração coordenada sindética adversativa.',null,'CERTO','“Mas” liga duas orações independentes e marca oposição/quebra de expectativa (estudou o edital × não resolveu questões). É a adversativa mais típica.'],
+['m1-02',1,'Coordenativas aditivas','ce','Em “Não só revisou a teoria, mas também refez os simulados”, a estrutura “não só... mas também” expressa oposição entre as ideias.',null,'ERRADO','A correlação “não só... mas também” é ADITIVA: soma as duas ações. O “mas” aqui não opõe nada; faz parte da dupla correlativa. Pegadinha clássica.'],
+['m1-03',1,'Coordenativas conclusivas','ce','Em “O candidato chegou atrasado; não pôde, portanto, fazer a prova”, o deslocamento de “portanto” para depois do verbo mantém seu valor conclusivo.',null,'CERTO','As conclusivas “portanto”, “logo”, “por isso” etc. podem vir intercaladas entre vírgulas sem perder o valor. A oração continua sendo uma conclusão do fato anterior.'],
+['m1-04',1,'Coordenativas explicativas','multi','Em “Leia o comando com calma, pois a banca adora pegadinhas”, a conjunção “pois” tem valor:',['conclusivo','explicativo','adversativo','concessivo','condicional'],'B','Depois de um verbo no imperativo (“leia”), o “pois” anteposto justifica a ordem: é EXPLICATIVO. Dica: imperativo + “pois/que/porque” quase sempre = explicação.'],
+['m1-05',1,'Coordenativas conclusivas','ce','Em “O servidor estava exausto; ele deve, pois, descansar”, a conjunção “pois” pode ser substituída por “logo” sem alteração de sentido.',null,'CERTO','Quando vem DEPOIS do verbo e entre vírgulas, “pois” é CONCLUSIVO (= logo, portanto). Anteposto ao verbo, costuma ser explicativo/causal.'],
+['m1-06',1,'Coordenativas alternativas','multi','Assinale a opção em que há conjunção coordenativa alternativa.',['Ora estuda, ora trabalha no escritório.','Estudou e passou no concurso.','Estudou, mas não passou.','Estudou, logo passou.','Estudou, porque queria passar.'],'A','“Ora... ora” indica alternância entre ações: alternativa. As demais: aditiva (b), adversativa (c), conclusiva (d) e causal/explicativa (e).'],
+['m1-07',1,'Coordenativas aditivas','ce','Em “Ele não estudou nem fez os exercícios”, a conjunção “nem” tem valor aditivo, equivalendo a “e não”.',null,'CERTO','“Nem” é a aditiva negativa: soma duas negações (não estudou + não fez os exercícios).'],
+['m1-08',1,'Coordenativas adversativas','ce','Em “A banca cobrou o tema; todavia, poucos acertaram”, a substituição de “todavia” por “portanto” preserva o sentido do período.',null,'ERRADO','“Todavia” é adversativa (oposição). “Portanto” é conclusiva. A troca mudaria a relação lógica: a frase passaria a dizer que poucos acertaram POR CAUSA da cobrança.'],
+['m1-09',1,'Coordenativas adversativas','multi','Em “O prazo era curto; contudo, o relatório ficou pronto”, a conjunção “contudo” pode ser substituída, sem alteração de sentido, por:',['porquanto','no entanto','por conseguinte','conquanto','porque'],'B','“No entanto” também é adversativa. Cuidado com “conquanto”: parece com “contudo”, mas é CONCESSIVA subordinativa (= embora) e exigiria reestruturar a frase.'],
+['m1-10',1,'Coordenativas aditivas','ce','Em “Estudou muito e não passou”, a conjunção “e”, embora tipicamente aditiva, assume valor adversativo pelo contexto.',null,'CERTO','O “e” pode ganhar valor de oposição quando liga ideias contrastantes (= “mas não passou”). Bancas adoram cobrar esse valor contextual.'],
+['m1-11',1,'Coordenativas conclusivas','multi','Em “As provas foram corrigidas; por conseguinte, o resultado sai amanhã”, a expressão destacada estabelece relação de:',['oposição','explicação','conclusão','alternância','adição'],'C','“Por conseguinte” = portanto, logo. Tira uma consequência lógica do fato anterior.'],
+['m1-12',1,'Coordenativas explicativas','ce','Em “Deve ter chovido, porque o chão está molhado”, a oração introduzida por “porque” exprime a causa de ter chovido.',null,'ERRADO','O chão molhado NÃO causa a chuva: é a EVIDÊNCIA que justifica a suposição. Por isso a oração é explicativa (coordenada), não causal.'],
+
+// ---------- Módulo 2: Adverbiais I ----------
+['m2-01',2,'Subordinativas causais','ce','Em “Como choveu muito, a prova foi adiada”, a conjunção “como” tem valor causal.',null,'CERTO','“Como” anteposto à oração principal, com sentido de “já que/porque”, é causal. A chuva é a causa do adiamento.'],
+['m2-02',2,'Subordinativas conformativas','ce','Em “Resolvi a questão como o professor ensinou”, a conjunção “como” tem valor causal.',null,'ERRADO','Aqui “como” = “conforme, do modo que”: valor CONFORMATIVO. Teste: troque por “conforme” — o sentido se mantém.'],
+['m2-03',2,'Subordinativas concessivas','multi','Em “Embora estivesse cansada, terminou a bateria de questões”, a conjunção “embora” pode ser substituída, sem prejuízo de sentido e correção, por:',['Porque estava','Conquanto estivesse','Desde que estivesse','Visto que estivesse','Já que estava'],'B','“Conquanto” é concessiva como “embora” e também pede subjuntivo. As demais são causais (a, d, e) ou condicional (c).'],
+['m2-04',2,'Subordinativas condicionais','ce','Em “Desde que você revise diariamente, a matéria se fixa”, a locução “desde que” tem valor condicional.',null,'CERTO','“Desde que” + subjuntivo (“revise”) = condição (= contanto que, se). Com indicativo e ideia de tempo, pode ser temporal.'],
+['m2-05',2,'Subordinativas temporais','ce','Em “Desde que entrou no cursinho, ela estuda à noite”, a locução “desde que” tem valor condicional.',null,'ERRADO','Aqui “desde que” + indicativo (“entrou”) marca o MOMENTO a partir do qual algo acontece: valor TEMPORAL. Compare com a questão anterior (subjuntivo → condição).'],
+['m2-06',2,'Subordinativas condicionais','multi','Em “Caso a banca anule a questão, todos os candidatos ganharão o ponto”, a oração introduzida por “caso” expressa:',['causa','concessão','condição','finalidade','tempo'],'C','“Caso” = “se”: hipótese de cuja realização depende a principal. Condicional.'],
+['m2-07',2,'Subordinativas conformativas','ce','Em “Conforme determina o edital, a prova terá 120 questões”, a oração iniciada por “conforme” é adverbial conformativa.',null,'CERTO','“Conforme” indica acordo, conformidade com o que o edital diz. Sinônimos: segundo, consoante, como.'],
+['m2-08',2,'Subordinativas concessivas','ce','Em “Mesmo que a banca mude, o conteúdo básico se mantém”, a locução “mesmo que” introduz oração concessiva.',null,'CERTO','Concessiva = admite um fato contrário que NÃO impede a principal. A mudança de banca não impede que o conteúdo se mantenha.'],
+['m2-09',2,'Subordinativas concessivas','multi','Assinale a opção em que há oração subordinada adverbial concessiva.',['Se estudar, passa.','Ainda que estude pouco, passa.','Porque estudou, passou.','Quando estudou, passou.','Para que passe, estude.'],'B','“Ainda que” = embora: concessiva. As outras: condicional (a), causal (c), temporal (d) e final (e).'],
+['m2-10',2,'Subordinativas causais','ce','Em “Visto que o sistema caiu, o prazo foi prorrogado”, a locução “visto que” pode ser substituída por “uma vez que” sem alteração de sentido.',null,'CERTO','Ambas são causais: “visto que”, “uma vez que”, “já que”, “porquanto”.'],
+['m2-11',2,'Subordinativas concessivas','ce','Em “Por mais que se esforçasse, não conseguia decorar a tabela”, a locução “por mais que” exprime proporção.',null,'ERRADO','“Por mais que” é CONCESSIVA (= ainda que se esforçasse muito). Não confunda com as proporcionais “à medida que”, “quanto mais... mais”.'],
+['m2-12',2,'Subordinativas condicionais','ce','Em “Aceitaremos o recurso, contanto que seja fundamentado”, a substituição de “contanto que” por “desde que” preserva o sentido original.',null,'CERTO','As duas são condicionais quando seguidas de subjuntivo (“seja”).'],
+['m2-13',2,'Subordinativas causais','multi','Em “Porquanto não apresentou os documentos, o candidato foi eliminado”, a conjunção destacada tem valor:',['concessivo','causal','final','conformativo','proporcional'],'B','“Porquanto” = porque, visto que. Pouco usual no dia a dia, mas muito cobrado.'],
+
+// ---------- Módulo 3: Adverbiais II ----------
+['m3-01',3,'Subordinativas consecutivas','ce','Em “Estudou tanto que sonhou com a Lei 8.213”, a oração iniciada por “que” exprime consequência.',null,'CERTO','Intensificador (tanto, tão, tal, tamanho) + “que” = CONSECUTIVA. Sonhar com a lei é a consequência de estudar tanto.'],
+['m3-02',3,'Subordinativas proporcionais','multi','Em “À medida que resolvia questões, errava menos”, a oração destacada tem valor:',['causal','temporal','proporcional','consecutivo','final'],'C','“À medida que” relaciona dois fatos que crescem ou diminuem juntos: proporção.'],
+['m3-03',3,'Subordinativas proporcionais','ce','Segundo a norma-padrão, a forma “à medida em que” é a indicada para expressar proporção.',null,'ERRADO','O correto é “À MEDIDA QUE” (proporção). “Na medida em que” existe, mas tem outro valor (causal). A mistura “à medida em que” é considerada inadequada.'],
+['m3-04',3,'Subordinativas causais','ce','Em “Na medida em que o prazo acabou, o recurso não foi aceito”, a locução “na medida em que” tem valor causal.',null,'CERTO','“Na medida em que” = uma vez que, já que. Diferente de “à medida que” (proporcional).'],
+['m3-05',3,'Subordinativas finais','multi','Em “Grifou os artigos a fim de que memorizasse os prazos”, a oração destacada indica:',['causa','finalidade','consequência','concessão','condição'],'B','“A fim de que” / “para que” = finalidade, objetivo.'],
+['m3-06',3,'Subordinativas comparativas','ce','Em “Ele é mais dedicado do que o irmão”, há uma oração subordinada adverbial comparativa, com o verbo elíptico.',null,'CERTO','Subentende-se “do que o irmão (é dedicado)”. Nas comparativas o verbo costuma ficar implícito.'],
+['m3-07',3,'Subordinativas temporais','ce','Em “Mal chegou ao escritório, abriu o edital”, a palavra “mal” tem valor temporal, equivalendo a “assim que”.',null,'CERTO','Quando introduz oração, “mal” = logo que, assim que. Não é advérbio de modo aqui.'],
+['m3-08',3,'Subordinativas proporcionais','ce','Em “Quanto mais estudo, mais aprendo”, a correlação “quanto mais... mais” estabelece relação comparativa.',null,'ERRADO','“Quanto mais... mais” é PROPORCIONAL: as duas grandezas variam juntas. Não há comparação entre dois termos.'],
+['m3-09',3,'Subordinativas temporais','ce','Em “Assim que saiu o resultado, ligou para a mãe”, a locução “assim que” pode ser substituída por “logo que” sem alteração de sentido.',null,'CERTO','Ambas são temporais e indicam anterioridade imediata.'],
+['m3-10',3,'Subordinativas consecutivas','multi','Compare: (I) “Revisou toda a matéria, de modo que se sentiu seguro.” (II) “Revisou toda a matéria de modo que se sentisse seguro.” As orações iniciadas por “de modo que” expressam, respectivamente:',['finalidade e consequência','consequência e finalidade','causa e finalidade','consequência e causa','finalidade e finalidade'],'B','Com indicativo (“sentiu”) o sentir-se seguro é RESULTADO: consecutiva. Com subjuntivo (“sentisse”) é OBJETIVO: final. O modo verbal decide.'],
+['m3-11',3,'Subordinativas temporais','ce','Em “Tão logo termine a prova, entregue o cartão-resposta”, a locução “tão logo” tem valor consecutivo.',null,'ERRADO','Apesar do “tão”, “tão logo” = assim que: valor TEMPORAL. Consecutiva seria “tão + adjetivo/advérbio + que”.'],
+['m3-12',3,'Subordinativas finais','ce','Em “Estudou para que pudesse ajudar a família”, a oração introduzida por “para que” exprime a causa do estudo.',null,'ERRADO','“Para que” indica FINALIDADE (o objetivo), não causa. Causa responde “por quê?”; finalidade responde “para quê?”.'],
+
+// ---------- Módulo 4: “que”, “se”, “como” ----------
+['m4-01',4,'Integrantes','ce','Em “É importante que você leia o edital”, o “que” é conjunção integrante e introduz oração subordinada substantiva.',null,'CERTO','Teste: troque a oração por “ISSO” → “Isso é importante”. Se funcionar, é substantiva, e o “que” é integrante.'],
+['m4-02',4,'Integrantes','ce','Em “O edital que saiu ontem prevê mil vagas”, o “que” é conjunção integrante.',null,'ERRADO','É PRONOME RELATIVO: retoma “edital” e pode ser trocado por “o qual”. Teste: “O edital o qual saiu ontem...” funciona.'],
+['m4-03',4,'Integrantes','multi','Em “Não sei se a banca vai manter o gabarito”, o “se” é:',['conjunção condicional','conjunção integrante','pronome reflexivo','partícula apassivadora','conjunção causal'],'B','A oração é objeto de “não sei” (não sei ISSO). O “se” introduz oração substantiva: integrante.'],
+['m4-04',4,'Subordinativas condicionais','ce','Em “Se a banca mantiver o gabarito, recorrerei”, o “se” é conjunção integrante.',null,'ERRADO','Aqui “se” introduz uma HIPÓTESE: condicional. Teste: troque por “caso” → “Caso a banca mantenha...”.'],
+['m4-05',4,'Os vários “que”','multi','Em qual opção o “que” é pronome relativo?',['Espero que você passe.','O livro que comprei é ótimo.','Estudou tanto que passou.','Corra, que vai chover.','É mais difícil do que parece.'],'B','Em (b), “que” retoma “livro” (= o qual). Os demais: integrante (a), consecutivo (c), explicativo (d) e comparativo (e).'],
+['m4-06',4,'Os vários “que”','ce','Em “Corra, que vai chover”, o “que” tem valor explicativo.',null,'CERTO','Depois de imperativo (“corra”), o “que” justifica a ordem: = “pois vai chover”.'],
+['m4-07',4,'Os vários “como”','ce','O “como” de valor causal costuma vir anteposto à oração principal, como em “Como era feriado, a biblioteca fechou”.',null,'CERTO','O “como” causal normalmente abre o período. Posposto, a leitura tende a ser comparativa ou conformativa.'],
+['m4-08',4,'Os vários “como”','multi','Em “Ela fala como uma professora experiente”, o “como” tem valor:',['causal','conformativo','comparativo','temporal','final'],'C','Compara o modo de falar dela ao de uma professora experiente (“como uma professora experiente fala”).'],
+['m4-09',4,'Os vários “que”','ce','Em “Tenho certeza de que você vai passar”, o “que” é conjunção integrante e a oração completa o sentido do substantivo “certeza”.',null,'CERTO','É oração substantiva completiva nominal: “certeza de ISSO”. O “de” antes do “que” é exigido por “certeza”.'],
+['m4-10',4,'Integrantes','ce','A conjunção integrante introduz orações subordinadas adverbiais.',null,'ERRADO','Integrantes (“que”, “se”) introduzem orações SUBSTANTIVAS, que funcionam como sujeito, objeto, complemento nominal etc.'],
+['m4-11',4,'Os vários “que”','multi','Em “Mais vale um candidato preparado que dez ansiosos”, o “que” tem valor:',['comparativo','consecutivo','integrante','explicativo','relativo'],'A','“Mais... (do) que” estabelece comparação.'],
+
+// ---------- Módulo 5: Reescrita e pontuação ----------
+['m5-01',5,'Reescrita','ce','A reescrita de “Embora o prazo fosse curto, a equipe concluiu o trabalho” como “O prazo era curto, mas a equipe concluiu o trabalho” mantém a relação de oposição e a correção gramatical.',null,'CERTO','Concessiva (“embora”) e adversativa (“mas”) expressam ideias contrárias. A troca exige ajustar o verbo (fosse → era), e foi feito.'],
+['m5-02',5,'Reescrita','ce','Em “A prova foi difícil, por isso muitos candidatos ficaram abaixo da nota de corte”, a substituição de “por isso” por “portanto” preserva o sentido.',null,'CERTO','Ambas são conclusivas.'],
+['m5-03',5,'Pontuação e conectivos','ce','Em “A banca, porém, manteve o gabarito”, o deslocamento de “porém” para o interior da oração exige que ele fique isolado por vírgulas.',null,'CERTO','Conjunções adversativas e conclusivas deslocadas (porém, contudo, portanto...) ficam entre vírgulas.'],
+['m5-04',5,'Pontuação e conectivos','ce','Diferentemente de “porém”, a conjunção “mas” não pode ser deslocada para o meio da oração que introduz.',null,'CERTO','“Mas” fica obrigatoriamente no início da oração. Não se escreve “A banca, mas, manteve o gabarito”.'],
+['m5-05',5,'Reescrita','multi','Assinale a reescrita que preserva o sentido de “Ainda que o recurso seja deferido, a classificação não muda”.',['Se o recurso for deferido, a classificação não muda.','Mesmo que o recurso seja deferido, a classificação não muda.','Porque o recurso foi deferido, a classificação não muda.','Para que o recurso seja deferido, a classificação não muda.','Assim que o recurso for deferido, a classificação não muda.'],'B','“Ainda que” e “mesmo que” são concessivas. As outras mudam o sentido para condição (a), causa (c), finalidade (d) ou tempo (e).'],
+['m5-06',5,'Reescrita','ce','Em “O servidor foi advertido, visto que descumpriu a norma”, a substituição de “visto que” por “porquanto” preserva o sentido.',null,'CERTO','Ambas são causais.'],
+['m5-07',5,'Pontuação e conectivos','ce','Em “Estude, senão vai reprovar”, a palavra “senão” poderia ser grafada “se não” sem prejuízo do sentido.',null,'ERRADO','“Senão” (junto) = caso contrário. “Se não” (separado) = conjunção condicional + negação (“se não estudar”). Em “Estude, se não vai reprovar” a frase perde o sentido.'],
+['m5-08',5,'Reescrita','multi','Em “Ele não estudou; entretanto, passou”, a relação estabelecida por “entretanto” é de:',['conclusão','oposição','explicação','condição','finalidade'],'B','“Entretanto” é adversativa, sinônimo de “porém, contudo, no entanto”.'],
+['m5-09',5,'Reescrita','ce','A reescrita de “Como não estudou, reprovou” para “Não estudou, por isso reprovou” preserva a relação de sentido entre as orações.',null,'CERTO','A causa (“como não estudou”) passa a ser apresentada e a consequência vem com conclusiva (“por isso”). A relação causa → efeito se mantém.'],
+['m5-10',5,'Reescrita','ce','Em “Caso não haja vagas, o candidato fica no cadastro reserva”, a substituição de “Caso não haja” por “Embora não haja” preserva o sentido.',null,'ERRADO','“Caso” = condição (hipótese). “Embora” = concessão (fato admitido que não impede). A troca muda o sentido do período.']
+];
+const QUESTIONS=RAW.map(([id,aula,assunto,tipo,enun,alts,gab,expl],i)=>({
+  id:'conj-'+id,aula,aula_nome:'Módulo '+String(aula).padStart(2,'0'),assunto,fonte:'(Questão de treino)',banca:'TREINO',tipo,numero:i+1,
+  texto:enun+'\n\n'+(tipo==='multi'?alts.map((a,k)=>'abcde'[k]+') '+a).join('\n'):'Certo ( )\nErrado ( )'),
+  gabarito:gab,resolucao:expl
+}));
+
+// ================== SINCRONIZAÇÃO (mesma tabela do Previdenciário) ==================
+// O histórico fica na mesma linha de quiz_progress, mas só com chaves que começam com "conj-".
+// Ao salvar, o app relê o que está no banco e preserva as chaves do Previdenciário.
+const PREFIX='conj-';
+const SUPABASE_URL='https://sqhgkbipiwlcekdbsbmv.supabase.co';
+const SUPABASE_KEY='sb_publishable_LfjbjFi04lXSHmG1nIdE6g_tPA4qktj';
+let sb=null;
+try{ if(window.supabase){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){ console.error('Falha ao inicializar o Supabase:',e); }
+let currentUser=null;
+const $=id=>document.getElementById(id);
+const aulaBox=$('aulaBox'),aulaHead=$('aulaHead'),aulaList=$('aulaList'),aulaInfo=$('aulaInfo'),fAssunto=$('fAssunto'),fQtd=$('fQtd');
+const qTag=$('qTag'),qMeta=$('qMeta'),qCounter=$('qCounter'),bar=$('bar'),questionArea=$('questionArea'),report=$('report'),reportBody=$('reportBody');
+const modeStudy=$('modeStudy'),modeProof=$('modeProof'),modeHint=$('modeHint');
+let studyMode=true,state={},session=[],pos=0,sessionResults=[],saveInFlight=Promise.resolve();
+
+function onlyMine(obj){return Object.fromEntries(Object.entries(obj||{}).filter(([k])=>k.startsWith(PREFIX)))}
+function notMine(obj){return Object.fromEntries(Object.entries(obj||{}).filter(([k])=>!k.startsWith(PREFIX)))}
+async function fetchRemoteFull(){
+  const {data,error}=await sb.from('quiz_progress').select('state').eq('user_id',currentUser.id).maybeSingle();
+  if(error) throw error;
+  return (data&&data.state)||{};
+}
+async function loadRemote(){
+  if(!currentUser||!sb) return {};
+  try{ return onlyMine(await fetchRemoteFull()); }
+  catch(e){ console.error('Erro ao carregar progresso:',e); return {}; }
+}
+function save(){
+  updateStats();
+  if(!currentUser||!sb) return saveInFlight;
+  const snapshot=JSON.parse(JSON.stringify(state));
+  saveInFlight=saveInFlight.then(async()=>{
+    try{
+      const others=notMine(await fetchRemoteFull());
+      const {error}=await sb.from('quiz_progress').upsert({user_id:currentUser.id,state:{...others,...snapshot},updated_at:new Date().toISOString()});
+      if(error) throw error;
+    }catch(e){ console.error('Erro ao salvar progresso:',e); }
+  });
+  return saveInFlight;
+}
+
+// ================== LÓGICA DO TREINO ==================
+function hist(id){return state[id]||{status:'unseen',tentativas:0,acertos:0,erros:0}}
+function eligible(f){return QUESTIONS.filter(q=>(!f.aulas.length||f.aulas.includes(String(q.aula)))&&(!f.assunto||q.assunto===f.assunto))}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function queue(f){const rank={unseen:0,wrong:1,correct:2};return shuffle(eligible(f).slice()).sort((a,b)=>{const A=hist(a.id),B=hist(b.id);const r=(rank[A.status]??0)-(rank[B.status]??0);return r||((A.last??0)-(B.last??0))})}
+function updateStats(){const all=QUESTIONS.map(q=>hist(q.id));$('sTotal').textContent=QUESTIONS.length;$('sUnseen').textContent=all.filter(x=>x.status==='unseen').length;$('sWrong').textContent=all.filter(x=>x.status==='wrong').length;const at=all.reduce((s,x)=>s+(x.acertos||0)+(x.erros||0),0),ok=all.reduce((s,x)=>s+(x.acertos||0),0);$('sAccuracy').textContent=at?Math.round(ok/at*100)+'%':'—'}
+let selectedAulas=[];
+function fillFilters(){
+  const mods=Object.keys(MODULOS);
+  aulaList.innerHTML='<div class="multiactions"><button type="button" class="mini" id="selAll">Todos</button><button type="button" class="mini" id="selNone">Limpar</button></div>'+mods.map(m=>`<label class="multirow"><input type="checkbox" value="${m}" class="aulaCheck"> ${String(m).padStart(2,'0')} — ${esc(MODULOS[m])}</label>`).join('');
+  document.querySelectorAll('.aulaCheck').forEach(c=>c.onchange=updateAulaSelection);
+  $('selAll').onclick=()=>{document.querySelectorAll('.aulaCheck').forEach(c=>c.checked=true);updateAulaSelection()};
+  $('selNone').onclick=()=>{document.querySelectorAll('.aulaCheck').forEach(c=>c.checked=false);updateAulaSelection()};
+  updateAulaSelection();
+}
+function updateAulaSelection(){
+  selectedAulas=[...document.querySelectorAll('.aulaCheck:checked')].map(c=>c.value);
+  const total=document.querySelectorAll('.aulaCheck').length;
+  if(!selectedAulas.length||selectedAulas.length===total){aulaHead.textContent='Todos os módulos ▾';aulaInfo.textContent='Todos os módulos selecionados'}
+  else{aulaHead.textContent=`${selectedAulas.length} módulo(s) selecionado(s) ▾`;aulaInfo.textContent=selectedAulas.map(x=>'Módulo '+String(x).padStart(2,'0')).join(', ')}
+  const base=selectedAulas.length?QUESTIONS.filter(q=>selectedAulas.includes(String(q.aula))):QUESTIONS;
+  const assuntos=[...new Set(base.map(q=>q.assunto))].sort();const atual=fAssunto.value;
+  fAssunto.innerHTML='<option value="">Todos os assuntos</option>'+assuntos.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  if(assuntos.includes(atual))fAssunto.value=atual;
+}
+aulaHead.onclick=()=>aulaBox.classList.toggle('open');
+document.addEventListener('click',e=>{if(!aulaBox.contains(e.target))aulaBox.classList.remove('open')});
+
+function startBattery(){const qtd=Math.max(1,parseInt(fQtd.value||'10'));const q=queue({aulas:selectedAulas,assunto:fAssunto.value});if(!q.length){alert('Não há questões para esse filtro.');return}session=q.slice(0,Math.min(qtd,q.length));pos=0;sessionResults=[];report.classList.add('hidden');renderQ()}
+function textHtml(raw){return String(raw).split(/\n\n+/).map(p=>'<div class="para">'+p.split('\n').map(l=>/^(?:[a-e]\)|Certo \(|Errado \()/i.test(l)?'<div class="option">'+esc(l)+'</div>':esc(l)).join('')+'</div>').join('')}
+function renderQ(){
+  const q=session[pos];if(!q){finish();return}
+  qTag.textContent=`Módulo ${String(q.aula).padStart(2,'0')} • ${q.tipo==='multi'?'Múltipla escolha':'Certo/Errado'}`;
+  qMeta.textContent=q.assunto;qCounter.textContent=`${pos+1}/${session.length}`;bar.style.width=(pos/session.length*100)+'%';
+  const choices=q.tipo==='multi'?['A','B','C','D','E']:['CERTO','ERRADO'];
+  questionArea.innerHTML=`<div class="question"><div class="questionText">${textHtml(q.texto)}</div></div><div class="choicegrid">${choices.map(c=>`<button type="button" class="choice" data-choice="${c}" onclick="answer('${c}')">${c}</button>`).join('')}</div><div id="feedback"></div>`;
+}
+function answer(choice){
+  const q=session[pos];if(!q)return;
+  const correct=choice===q.gabarito;const h=hist(q.id);
+  h.tentativas=(h.tentativas||0)+1;h.last=Date.now();
+  if(correct){h.acertos=(h.acertos||0)+1;h.status='correct'}else{h.erros=(h.erros||0)+1;h.status='wrong'}
+  state[q.id]=h;save();sessionResults.push({q,choice,correct});
+  document.querySelectorAll('.choice').forEach(b=>{b.disabled=true;const c=b.dataset.choice;if(c===choice)b.classList.add('selected');if(c===q.gabarito)b.classList.add('correctAnswer');if(c===choice&&!correct)b.classList.add('wrongAnswer')});
+  const fb=$('feedback');
+  if(studyMode){
+    fb.className='feedback '+(correct?'ok':'bad');
+    fb.innerHTML=`<div class="answerfirst"><b>🎯 Resposta correta:</b> ${esc(q.gabarito)}</div><div class="resultline"><b>🖊️ Sua resposta:</b> ${esc(choice)}</div><div class="resultline">${correct?'✅ <b>Você acertou!</b>':'❌ <b>Você errou.</b>'}</div><div class="resolution"><h3>📚 Por que essa é a resposta</h3>${textHtml(q.resolucao)}</div><button type="button" class="nextbtn" onclick="nextQuestion()">Próxima questão →</button>`;
+  }else{fb.className='feedback';fb.innerHTML='<button type="button" class="nextbtn" onclick="nextQuestion()">Próxima questão →</button>'}
+}
+function nextQuestion(){if(pos<session.length-1){pos++;renderQ();return}finish()}
+function finish(){bar.style.width='100%';questionArea.innerHTML='<h2>🎉 Bateria concluída!</h2><p>Seu histórico foi atualizado: as erradas voltam antes das acertadas na próxima bateria.</p><button class="btn" onclick="showReport()">Ver relatório geral</button>';renderSessionReport()}
+function renderSessionReport(){
+  const total=sessionResults.length,ok=sessionResults.filter(x=>x.correct).length;
+  const erradas=sessionResults.filter(x=>!x.correct);
+  let html=`<p><b>${ok}/${total}</b> acertos (${total?Math.round(ok/total*100):0}%).</p>`;
+  if(!studyMode&&erradas.length){html+='<h3>Revisão das erradas</h3>'+erradas.map(x=>`<div class="resolution"><p><b>${esc(x.q.assunto)}</b> — você marcou <b>${esc(x.choice)}</b>, resposta <b>${esc(x.q.gabarito)}</b></p>${textHtml(x.q.texto)}<h3>📚 Explicação</h3>${textHtml(x.q.resolucao)}</div>`).join('')}
+  reportBody.innerHTML=html;report.classList.remove('hidden');
+}
+function showReport(){
+  const by={};QUESTIONS.forEach(q=>{const h=hist(q.id);const t=(h.acertos||0)+(h.erros||0);if(!t)return;const k=q.assunto;by[k]??={t:0,o:0,e:0};by[k].t+=t;by[k].o+=h.acertos||0;by[k].e+=h.erros||0});
+  const rows=Object.entries(by).sort((a,b)=>(a[1].o/a[1].t)-(b[1].o/b[1].t));
+  reportBody.innerHTML=rows.length?`<p class="note">Ordenado do assunto mais fraco para o mais forte.</p><table><tr><th>Assunto</th><th>Acertos</th><th>Erros</th><th>Precisão</th></tr>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.o}</td><td>${v.e}</td><td>${Math.round(v.o/v.t*100)}%</td></tr>`).join('')}</table>`:'<p>Ainda não há respostas registradas.</p>';
+  report.classList.remove('hidden');report.scrollIntoView({behavior:'smooth'});
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+modeStudy.onclick=()=>{studyMode=true;modeStudy.classList.add('active');modeProof.classList.remove('active');modeHint.textContent='Mostra o resultado e a explicação após cada resposta.'};
+modeProof.onclick=()=>{studyMode=false;modeProof.classList.add('active');modeStudy.classList.remove('active');modeHint.textContent='Sem gabarito durante a bateria; as erradas aparecem explicadas no final.'};
+$('start').onclick=startBattery;$('reportBtn').onclick=showReport;
+
+const resetModal=$('resetModalOverlay');
+$('reset').onclick=()=>resetModal.classList.remove('hidden');
+$('resetCancelBtn').onclick=()=>resetModal.classList.add('hidden');
+resetModal.onclick=e=>{if(e.target===resetModal)resetModal.classList.add('hidden')};
+$('resetConfirmBtn').onclick=async()=>{
+  resetModal.classList.add('hidden');state={};session=[];sessionResults=[];pos=0;
+  report.classList.add('hidden');bar.style.width='0%';qCounter.textContent='';qTag.textContent='Pronto';qMeta.textContent='Escolha os filtros e a quantidade de questões.';
+  questionArea.innerHTML='<h2>🗑️ Histórico zerado!</h2><p class="note">Todas as questões de conjunções voltaram a ser inéditas.</p>';
+  await save();
+};
+window.answer=answer;window.nextQuestion=nextQuestion;window.showReport=showReport;
+
+// ================== LOGIN ==================
+const authOverlay=$('authOverlay'),authLoading=$('authLoading'),authForm=$('authForm'),authEmail=$('authEmail'),authPassword=$('authPassword'),authError=$('authError'),authStatus=$('authStatus');
+function showAuthError(m){authError.textContent=m;authError.classList.remove('hidden')}
+function clearAuthError(){authError.textContent='';authError.classList.add('hidden')}
+async function showApp(user){currentUser=user;authOverlay.classList.add('hidden');$('appRoot').classList.remove('hidden');$('userBox').classList.remove('hidden');$('userEmail').textContent=user.email||'';state=await loadRemote();fillFilters();updateStats()}
+function showLogin(){currentUser=null;$('appRoot').classList.add('hidden');$('userBox').classList.add('hidden');authOverlay.classList.remove('hidden');authLoading.classList.add('hidden');authForm.classList.remove('hidden');clearAuthError();authStatus.textContent=''}
+$('authLoginBtn').onclick=async function(){
+  if(!sb){showAuthError('Sem conexão com o servidor de sincronização.');return}
+  clearAuthError();const email=authEmail.value.trim(),password=authPassword.value;
+  if(!email||!password){showAuthError('Preencha email e senha.');return}
+  this.disabled=true;const {data,error}=await sb.auth.signInWithPassword({email,password});this.disabled=false;
+  if(error){showAuthError(error.message);return}await showApp(data.user);
+};
+$('authSignupBtn').onclick=async function(){
+  if(!sb){showAuthError('Sem conexão com o servidor de sincronização.');return}
+  clearAuthError();const email=authEmail.value.trim(),password=authPassword.value;
+  if(!email||!password){showAuthError('Preencha email e senha.');return}
+  if(password.length<6){showAuthError('A senha precisa ter pelo menos 6 caracteres.');return}
+  this.disabled=true;const {data,error}=await sb.auth.signUp({email,password});this.disabled=false;
+  if(error){showAuthError(error.message);return}
+  if(data.session)await showApp(data.user);else authStatus.textContent='Conta criada! Confirme pelo email antes de entrar.';
+};
+$('logoutBtn').onclick=async()=>{if(sb)await sb.auth.signOut();state={};showLogin()};
+async function refreshIfIdle(){if(!currentUser||session.length)return;state=await loadRemote();updateStats()}
+if(sb){
+  sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT')showLogin()});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshIfIdle()});
+  window.addEventListener('focus',refreshIfIdle);
+}
+(async function(){
+  if(!sb){authLoading.classList.add('hidden');showAuthError('Não foi possível conectar ao servidor de sincronização (verifique a internet e recarregue).');return}
+  const {data:{session:s}}=await sb.auth.getSession();
+  if(s&&s.user)await showApp(s.user);else showLogin();
+})();
+</script></body></html>
